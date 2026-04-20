@@ -17,27 +17,8 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: "gpt-5",
-        tools: [{ type: "web_search_preview" }],
-        input: `
-You are a combat sports industry analyst.
-
-Create a WEEKLY EXECUTIVE BRIEFING covering:
-- MMA, Boxing, BJJ, Wrestling
-- Equipment brands (Hayabusa, Venum, Everlast, Rival, etc.)
-- Events (UFC, ONE, PFL, major boxing cards)
-- Retail & eCommerce trends
-- Geographic insights
-
-Structure:
-
-1. KEY HEADLINES
-2. MARKET MOVEMENTS
-3. EVENT & ATHLETE MOMENTUM
-4. RETAIL / ECOM SIGNALS
-5. STRATEGIC TAKEAWAYS
-
-Concise. Executive. No fluff.
-        `
+        max_output_tokens: 500, // 👈 keeps it fast
+        input: "Give a short weekly overview of combat sports market trends."
       })
     });
 
@@ -59,7 +40,7 @@ Concise. Executive. No fluff.
 
     return res.status(200).json({
       ok: true,
-      briefing: text
+      briefing: text || "No output returned"
     });
 
   } catch (err) {
