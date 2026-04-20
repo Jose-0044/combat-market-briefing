@@ -25,22 +25,18 @@ Create a WEEKLY EXECUTIVE BRIEFING covering:
 - MMA, Boxing, BJJ, Wrestling
 - Equipment brands (Hayabusa, Venum, Everlast, Rival, etc.)
 - Events (UFC, ONE, PFL, major boxing cards)
-- Retail & eCommerce trends (Amazon, DTC, wholesale)
-- Geographic insights (US, UK, Brazil, Middle East, Asia)
+- Retail & eCommerce trends
+- Geographic insights
 
 Structure:
 
-1. KEY HEADLINES (5 bullets)
-2. MARKET MOVEMENTS (brands, partnerships, distribution)
+1. KEY HEADLINES
+2. MARKET MOVEMENTS
 3. EVENT & ATHLETE MOMENTUM
 4. RETAIL / ECOM SIGNALS
-5. STRATEGIC TAKEAWAYS (for a premium combat brand)
+5. STRATEGIC TAKEAWAYS
 
-Tone:
-- Executive
-- Concise
-- Commercially focused
-- No fluff
+Concise. Executive. No fluff.
         `
       })
     });
