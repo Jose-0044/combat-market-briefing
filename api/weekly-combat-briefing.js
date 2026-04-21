@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         model: "gpt-5.4",
         tools: [{ type: "web_search" }],
         tool_choice: "auto",
-        max_output_tokens: 2400,
+        max_output_tokens: 2600,
         input: `
 You are a commercial market intelligence agent focused on global combat sports.
 
@@ -199,7 +199,12 @@ SIGNAL HIERARCHY:
   - competitive movement
   - channel shift
 - Write these first and make them slightly more detailed
-- All other signals should be tighter and more concise
+- All other signals should be shorter and tighter
+
+SIGNAL INTENSITY RULE:
+- The top 2–3 signals must clearly feel like the most important movements of the week
+- Supporting signals should be concise
+- Avoid making every signal feel equally important
 
 CLUSTER DEPTH RULE:
 Signal Clusters must:
@@ -222,6 +227,21 @@ Across the report, make clear:
 - where brands are defending margin
 - where brands are trying to take share
 - where channel power is shifting (Amazon vs DTC vs retail)
+
+EVENT & FIGHTER ENFORCEMENT:
+If at least one commercially relevant event signal exists:
+- you MUST include the Event & Platform Watch section
+
+If no such event signal exists:
+- explicitly state:
+  "No major commercially relevant event signals detected this week"
+
+If at least one commercially relevant fighter or boxer signal exists:
+- you MUST include the Prominent Fighters & Boxers Watch section
+
+If no such fighter/boxer signal exists:
+- explicitly state:
+  "No major commercially relevant fighter or boxer signals detected this week"
 
 STRICT RULES:
 - Every bullet must reference something real:
@@ -248,6 +268,7 @@ WEEKLY COMBAT MARKET RADAR
   - minimum 4 brand-related signals
   - minimum 2 channel/pricing signals
   - maximum 2 event-driven signals in this section
+- the first 2–3 bullets must be the highest-impact signals of the week
 - each bullet must include:
   - What happened
   - Commercial context
