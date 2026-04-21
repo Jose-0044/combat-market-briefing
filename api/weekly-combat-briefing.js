@@ -7,12 +7,11 @@ function extractOutputText(data) {
 
   if (!Array.isArray(data.output)) return "";
 
-  const chunks = [];
+  const parts = [];
 
   for (const item of data.output) {
     if (!item) continue;
 
-    // Standard assistant message path
     if (item.type === "message" && Array.isArray(item.content)) {
       for (const content of item.content) {
         if (
@@ -21,26 +20,25 @@ function extractOutputText(data) {
           typeof content.text === "string" &&
           content.text.trim()
         ) {
-          chunks.push(content.text.trim());
+          parts.push(content.text.trim());
         }
       }
     }
 
-    // Defensive fallback in case text appears elsewhere
     if (typeof item.text === "string" && item.text.trim()) {
-      chunks.push(item.text.trim());
+      parts.push(item.text.trim());
     }
 
     if (Array.isArray(item.content)) {
       for (const content of item.content) {
         if (typeof content?.text === "string" && content.text.trim()) {
-          chunks.push(content.text.trim());
+          parts.push(content.text.trim());
         }
       }
     }
   }
 
-  return chunks.join("\n\n").trim();
+  return parts.join("\n\n").trim();
 }
 
 export default async function handler(req, res) {
@@ -135,8 +133,8 @@ KEY HIGHLIGHTS
 
 HAYABUSA RELATED
 - 2 to 4 bullets
-- Hayabusa only
-- include Floyd Mayweather here if relevant to Hayabusa
+- Hayabusa items only
+- include Floyd Mayweather here if relevant
 
 COMBAT SECTOR SIGNALS
 - 2 to 4 bullets
@@ -168,35 +166,24 @@ SOCIAL MEDIA & COMBAT
 - No major commercially relevant social media combat signals detected this week
 `;
 
-  async function runOpenAI(useWebSearch) {
-    const body = {
-      model: "gpt-5.4",
-      reasoning: { effort: "low" },
-      instructions,
-      input,
-      max_output_tokens: 4000
-    };
-
-    if (useWebSearch) {
-      body.tools = [{ type: "web_search" }];
-    }
-
+  try {
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify({
+        model: "gpt-5.4",
+        reasoning: { effort: "low" },
+        tools: [{ type: "web_search" }],
+        instructions,
+        input,
+        max_output_tokens: 4000
+      })
     });
 
     const data = await response.json();
-    return { response, data };
-  }
-
-  try {
-    // First attempt: with web search
-    let { response, data } = await runOpenAI(true);
 
     if (!response.ok) {
       return res.status(response.status).json({
@@ -205,27 +192,16 @@ SOCIAL MEDIA & COMBAT
       });
     }
 
-    let briefingText = extractOutputText(data);
-
-    // Fallback: retry once without web search if no visible text returned
-    if (!briefingText) {
-      const fallback = await runOpenAI(false);
-
-      if (!fallback.response.ok) {
-        return res.status(fallback.response.status).json({
-          ok: false,
-          openai_error: fallback.data
-        });
-      }
-
-      briefingText = extractOutputText(fallback.data);
-    }
+    const briefingText = extractOutputText(data);
 
     if (!briefingText) {
       return res.status(200).json({
         ok: true,
         briefing_text: "No briefing generated.",
-        debug_note: "The model returned no visible text output."
+        debug: {
+          output_text_present: !!data.output_text,
+          output_items: Array.isArray(data.output) ? data.output.map(item => item.type) : []
+        }
       });
     }
 
