@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         model: "gpt-5.4",
         tools: [{ type: "web_search" }],
         tool_choice: "auto",
-        max_output_tokens: 2600,
+        max_output_tokens: 2800,
         input: `
 You are a commercial market intelligence agent focused on global combat sports.
 
@@ -47,7 +47,7 @@ COVERAGE AREAS:
 
 PRIORITY SHIFT:
 You are NOT tracking the sport.
-You are tracking competition, brands, and revenue movement.
+You are tracking competition, brands, channel dynamics, and revenue movement.
 
 The report MUST prioritize:
 - Equipment brands
@@ -55,6 +55,9 @@ The report MUST prioritize:
 - Retailers and marketplaces
 - Pricing and promotions
 - Distribution activity
+- Channel power shifts
+- Margin pressure
+- Monetization changes
 
 EVENTS are IMPORTANT but SECONDARY.
 They should appear in a short dedicated section only when they clearly show:
@@ -228,19 +231,14 @@ Across the report, make clear:
 - where brands are trying to take share
 - where channel power is shifting (Amazon vs DTC vs retail)
 
-EVENT & FIGHTER ENFORCEMENT:
-If at least one commercially relevant event signal exists:
-- you MUST include the Event & Platform Watch section
+SECTION ENFORCEMENT:
+You MUST always include:
+- Event & Platform Watch
+- Prominent Fighters & Boxers Watch
 
-If no such event signal exists:
+If no strong signals exist:
 - explicitly state:
   "No major commercially relevant event signals detected this week"
-
-If at least one commercially relevant fighter or boxer signal exists:
-- you MUST include the Prominent Fighters & Boxers Watch section
-
-If no such fighter/boxer signal exists:
-- explicitly state:
   "No major commercially relevant fighter or boxer signals detected this week"
 
 STRICT RULES:
@@ -309,6 +307,7 @@ WEEKLY COMBAT MARKET RADAR
   - where brands are defending margin
   - where brands are trying to take share
   - where channel power is shifting
+- keep these sharp, directional, and concise
 
 5. Event & Platform Watch
 - 2 to 4 bullets maximum
