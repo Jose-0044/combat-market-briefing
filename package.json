@@ -1,8 +1,0 @@
-{
-  "name": "combat-market-briefing",
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "@openai/agents": "^0.0.10"
-  }
-}
