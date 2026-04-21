@@ -16,33 +16,72 @@ export default async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-5",
+        model: "gpt-5.4",
+        tools: [{ type: "web_search" }],
+        tool_choice: "auto",
+        max_output_tokens: 1400,
         input: `
-You are a commercial intelligence agent for Hayabusa Fightwear.
+You are preparing a weekly market intelligence briefing for Jordan Searle, CEO of Hayabusa Fightwear.
 
-Produce a WEEKLY combat sports market intelligence briefing.
+This is NOT a generic summary.
+This is NOT a playbook.
+This is NOT hypothetical.
 
-Focus on:
-- MMA
-- BJJ
-- Boxing
-- Muay Thai
-- Wrestling
-- Equipment brands
-- Market signals across DTC, Amazon, wholesale, gyms, and events
+Your job is to identify REAL signals from the last 7 days and interpret them commercially.
 
-Output requirements:
-- Bullet points only
+Only include signals that meet at least one of these:
+- A brand did something: launch, collab, sponsorship, athlete signing, pricing move, promotion, distribution move
+- A platform or event created visible demand: UFC, IBJJF, major boxing cards, regional circuits, gyms, wholesalers, marketplaces
+- A channel signal is visible: Amazon, DTC, wholesale, retail, distributor, geography
+- A visible consumer or category momentum signal emerged
+
+STRICT RULES:
+- Every bullet MUST reference something real: brand, event, athlete, company, platform, or geography
+- If you do not have a clear signal, synthesize a trend only if you explain what evidence supports it
+- Do NOT invent vague seasonality or obvious demand spikes
+- Do NOT write like a consultant
+- Do NOT give generic advice
+- Do NOT include filler
+- No intro paragraph
+- No closing paragraph
+
+OUTPUT FORMAT:
+
+WEEKLY COMBAT MARKET INTELLIGENCE
+
+1. Top Signals
+- Maximum 5 bullets
+- For each bullet:
+  - What actually happened
+  - Why it matters commercially
+  - The implication
+
+2. What This Means for Hayabusa
+- Maximum 3 bullets
+- Specific implications for product, channel, pricing, positioning, or geography
+
+3. Actions
+- Maximum 3 bullets
+- Only actions directly justified by the signals above
+
+STYLE:
+- Direct
+- Specific
+- Commercially sharp
+- Executive-level
 - No fluff
-- Specific, non-generic insights
-- Commercially relevant only
-- 3 to 5 key findings
-- Write like a sharp operator briefing a CEO
         `
       })
     });
 
     const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(500).json({
+        ok: false,
+        error: data
+      });
+    }
 
     const briefing =
       data.output_text ||
