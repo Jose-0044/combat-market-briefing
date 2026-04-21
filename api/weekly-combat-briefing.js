@@ -12,6 +12,7 @@ function extractOutputText(data) {
   for (const item of data.output) {
     if (!item) continue;
 
+    // Standard assistant message structure
     if (item.type === "message" && Array.isArray(item.content)) {
       for (const content of item.content) {
         if (
@@ -25,6 +26,7 @@ function extractOutputText(data) {
       }
     }
 
+    // Defensive fallbacks
     if (typeof item.text === "string" && item.text.trim()) {
       parts.push(item.text.trim());
     }
@@ -200,7 +202,9 @@ SOCIAL MEDIA & COMBAT
         briefing_text: "No briefing generated.",
         debug: {
           output_text_present: !!data.output_text,
-          output_items: Array.isArray(data.output) ? data.output.map(item => item.type) : []
+          output_items: Array.isArray(data.output)
+            ? data.output.map(item => item.type)
+            : []
         }
       });
     }
