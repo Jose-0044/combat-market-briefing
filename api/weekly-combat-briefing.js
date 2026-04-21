@@ -43,11 +43,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  // SAFE AUTH HANDLING
   const auth = (req.headers.authorization || "").trim();
   const expected = `Bearer ${process.env.ZAPIER_SECRET}`.trim();
 
   if (auth !== expected) {
     return res.status(401).json({
+      ok: false,
       error: "Unauthorized",
       received: auth
     });
@@ -59,191 +61,55 @@ export default async function handler(req, res) {
     const prompt = `
 You are a commercial market intelligence agent focused on global combat sports.
 
-You are writing for Jordan Searle, CEO of Hayabusa Fightwear.
+You are writing for the CEO of Hayabusa Fightwear.
 
-Write the output as a clean executive email in PLAIN TEXT only.
+Write a clean executive email in PLAIN TEXT.
 
-STRICT FORMAT RULES:
-- Do NOT use markdown
-- Do NOT use ##
-- Do NOT use **
-- Do NOT use tables
-- Do NOT add an intro paragraph
-- Do NOT add a closing paragraph
-- Do NOT write "Good morning"
+STRICT RULES:
+- NO markdown
+- NO ##
+- NO **
+- NO intro
+- NO closing
 
-Use this exact section structure:
+STRUCTURE:
 
 KEY HIGHLIGHTS
-- bullet
-- bullet
+- bullets
 
 HAYABUSA RELATED
-- bullet
-- bullet
+- bullets
 
 SIGNAL CLUSTERS
-- bullet
-- bullet
+- bullets
 
 MARKET PRESSURE SIGNALS
-- bullet
-- bullet
+- bullets
 
 EVENT & PLATFORM WATCH
-- bullet
-- bullet
+- bullets
 
 PROMINENT FIGHTERS & BOXERS WATCH
-- bullet
-- bullet
+- bullets
 
-CONTENT RULES:
-- Focus on the last 7 days only
-- Prioritize brands, pricing, channels, distribution, monetization
-- Events only if commercially relevant
-- Fighters/boxers only if commercially relevant
-- Keep bullets tight and commercially sharp
-- No fluff
-- No repetition
-- No generic observations
+RULES:
+- Last 7 days only
+- Focus on brands, pricing, distribution, monetization
+- Use USA, Canada, UK, France, Germany, UAE
+- Track: Hayabusa, Venum, Rival, RDX, Fairtex, Tatami, Scramble, Everlast, Sanabul
+- Include Marvel + Floyd Mayweather if relevant
+- Use sources like MMA Junkie, UFC, Ring Magazine, Boxingscene, IMMAF, UAE Warriors
 
-RESEARCH RULES:
-You MUST research beyond competitor websites.
-Use:
-- official brand / retailer / promotion websites
-- independent news coverage
-- trade / sport media coverage
-- country-specific coverage
+If no events:
+- write "No major commercially relevant event signals detected this week"
 
-You MUST search for relevant brand and market signals in:
-- USA
-- Canada
-- UK
-- France
-- Germany
-- UAE
-
-Priority brands to track:
-- Hayabusa
-- Venum
-- Rival
-- RDX
-- Fairtex
-- Tatami
-- Scramble
-- Everlast
-- Sanabul
-- Engage
-- TITLE Boxing
-
-You MUST explicitly check for relevant developments involving:
-- Marvel
-- Floyd Mayweather
-
-If there are no meaningful commercial developments for Marvel or Floyd Mayweather this week, say so explicitly in the appropriate section.
-
-Prioritize these sources when relevant:
-- mmajunkie.usatoday.com
-- mmamania.com
-- ufc.com
-- sportingnews.com/uk
-- grapplinginsider.com
-- reviewjournal.com
-- ringmagazine.com
-- boxingscene.com
-- win-magazine.com
-- worldboxing.org
-- fightnews.com
-- uaewarriors.com
-- gulftoday.ae
-- immaf.org
-
-SIGNAL RULES:
-- Every bullet must reference something real:
-  brand, company, event, athlete, boxer, retailer, distributor, platform, promotion, or geography
-- Every signal must answer:
-  "How does money move differently because of this?"
-- Only include signals that indicate at least one of:
-  1. a company is making money differently
-  2. a brand is trying to take share
-  3. a platform is increasing monetization
-  4. a price or promotion is changing behavior
-  5. a channel is expanding or contracting
-
-Exclude:
-- static product listings without change
-- general brand presence without movement
-- retailer descriptions without activity
-- legacy SKUs unless tied to pricing, refresh, or push
-
-OUTPUT RULES BY SECTION:
-
-KEY HIGHLIGHTS
-- 8 to 10 bullets
-- first 2 to 3 bullets must be the highest-impact signals of the week
-- minimum 4 brand-related signals
-- minimum 2 channel or pricing related signals
-- maximum 2 event-driven signals in this section
-- NO Hayabusa bullets in this section
-- each bullet must include:
-  - what happened
-  - commercial context
-  - signal type
-  - posture
-- posture must be one of:
-  - offensive move
-  - defensive move
-  - monetization expansion
-  - pricing pressure
-  - channel leverage
-
-HAYABUSA RELATED
-- 2 to 4 bullets
-- Hayabusa items only
-- include only real current signals
-- separate Hayabusa from competitor activity
-
-SIGNAL CLUSTERS
-- 2 to 4 bullets
-- identify structural shifts, not summaries
-- combine 2 to 3 supporting signals where possible
-- explain what is changing in pricing, competition, or channel dynamics
-
-MARKET PRESSURE SIGNALS
-- up to 4 bullets
-- explicitly identify:
-  - where pricing pressure is increasing
-  - where brands are defending margin
-  - where brands are trying to take share
-  - where channel power is shifting
-
-EVENT & PLATFORM WATCH
-- 2 to 4 bullets if relevant
-- only include commercially relevant events/platform items
-- if none, write exactly:
-- No major commercially relevant event signals detected this week
-
-PROMINENT FIGHTERS & BOXERS WATCH
-- 2 to 4 bullets if relevant
-- only include fighters or boxers with clear commercial relevance:
-  - sponsorships
-  - endorsements
-  - branded merchandise
-  - collectibles
-  - event-driven demand pull
-  - crossover media momentum with visible commercial effect
-- must explicitly address Floyd Mayweather if relevant
-- must explicitly address Marvel if relevant
-- if no relevant fighter/boxer items, write exactly:
+If no fighters:
+- write both:
 - No major commercially relevant fighter or boxer signals detected this week
 - No major commercially relevant Marvel signals detected this week
-
-OUTPUT COMPLETION RULE:
-You MUST fully complete all sections above.
-If nearing output limits, shorten lower-priority bullets rather than cutting off the final sections.
 `;
 
+    // 🔥 FIXED API CALL (stable config)
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -251,20 +117,20 @@ If nearing output limits, shorten lower-priority bullets rather than cutting off
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-5.4",
-        tools: [{ type: "web_search" }],
-        tool_choice: "auto",
-        max_output_tokens: 4000,
+        model: "gpt-5",
+        tools: [{ type: "web_search_preview" }],
+        max_output_tokens: 3000,
         input: prompt
       })
     });
 
     const data = await response.json();
 
+    // 🔍 FULL ERROR VISIBILITY
     if (!response.ok) {
-      return res.status(500).json({
+      return res.status(response.status).json({
         ok: false,
-        error: JSON.stringify(data)
+        openai_error: data
       });
     }
 
@@ -281,8 +147,8 @@ If nearing output limits, shorten lower-priority bullets rather than cutting off
 
     const briefingHtml = `
       <div style="font-family:Arial,Helvetica,sans-serif;max-width:900px;margin:0 auto;background:#ffffff;color:#111;">
-        <div style="padding:20px 20px 12px;border-bottom:1px solid #e5e5e5;">
-          ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="Logo" style="max-height:50px;display:block;" />` : ""}
+        <div style="padding:20px;border-bottom:1px solid #e5e5e5;">
+          ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" style="max-height:50px;" />` : ""}
         </div>
         <div style="padding:20px;">
           ${textToHtml(briefingText)}
@@ -295,10 +161,12 @@ If nearing output limits, shorten lower-priority bullets rather than cutting off
       briefing_text: briefingText,
       briefing_html: briefingHtml
     });
+
   } catch (error) {
     return res.status(500).json({
       ok: false,
-      error: error.message || String(error)
+      error: error.message,
+      stack: error.stack
     });
   }
 }
