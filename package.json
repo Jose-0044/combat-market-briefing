@@ -1,5 +1,4 @@
 {
   "name": "combat-market-briefing",
-  "private": true,
-  "type": "module"
+  "private": true
 }
