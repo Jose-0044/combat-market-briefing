@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         model: "gpt-5.4",
         tools: [{ type: "web_search" }],
         tool_choice: "auto",
-        max_output_tokens: 2200,
+        max_output_tokens: 2400,
         input: `
 You are a commercial market intelligence agent focused on global combat sports.
 
@@ -66,6 +66,14 @@ They should appear in a short dedicated section only when they clearly show:
 - platform/media momentum
 - distribution implications
 
+PROMINENT FIGHTERS AND BOXERS are IMPORTANT but SECONDARY.
+Only include them when they have clear commercial relevance, such as:
+- sponsorship or brand partnerships
+- fight-week demand creation
+- merchandise or collectibles activity
+- platform/media pull
+- crossover influence on equipment, apparel, or fan spend
+
 MANDATORY BRAND COVERAGE:
 Every report MUST include at least 4 signals related to equipment or apparel brands.
 
@@ -80,6 +88,8 @@ Prioritize:
 - Everlast
 - Sanabul
 - Engage
+
+Fairtex must be actively tracked in every weekly run, alongside the rest of the priority brand set.
 
 If specific activity is limited:
 - expand to adjacent competitors
@@ -108,6 +118,18 @@ Only include event-based signals if they involve at least one of:
 - media/platform momentum with visible commercial effect
 
 Otherwise, exclude them.
+
+FIGHTER / BOXER FILTER:
+Only include fighters or boxers if they are linked to at least one of:
+- sponsorship
+- partnership
+- branded merchandise
+- licensing / collectibles
+- event-driven demand
+- major media attention with visible commercial pull
+- influence on product, apparel, or fan-wallet behavior
+
+Do NOT include fighters or boxers just because they won, lost, or are famous.
 
 SIGNAL QUALITY TEST:
 Each signal must answer:
@@ -170,14 +192,29 @@ Lower priority:
 - isolated product launches without broader implication
 - static catalog activity
 
+SIGNAL HIERARCHY:
+- Identify the top 2–3 highest-impact signals of the week
+- These should be the strongest indicators of:
+  - pricing pressure
+  - competitive movement
+  - channel shift
+- Write these first and make them slightly more detailed
+- All other signals should be tighter and more concise
+
 CLUSTER DEPTH RULE:
 Signal Clusters must:
 - combine at least 2–3 signals
-- identify a structural pattern, not just describe activity
-- clearly state what is changing in the market
+- identify a structural shift, not just describe activity
+- clearly state what is changing in:
+  - pricing
+  - competition
+  - channel dynamics
 
 Each cluster should answer:
 "What is structurally shifting this week?"
+
+Avoid describing activity.
+Focus on explaining change.
 
 PRESSURE IDENTIFICATION:
 Across the report, make clear:
@@ -188,7 +225,7 @@ Across the report, make clear:
 
 STRICT RULES:
 - Every bullet must reference something real:
-  brand, company, event, athlete, retailer, distributor, platform, promotion, or geography
+  brand, company, event, athlete, boxer, retailer, distributor, platform, promotion, or geography
 - Use only developments from the last 7 days
 - No generic observations
 - No filler language
@@ -244,7 +281,15 @@ WEEKLY COMBAT MARKET RADAR
   - discounting
   - expanding channel/category
 
-4. Event & Platform Watch
+4. Market Pressure Signals
+- maximum 4 bullets
+- explicitly identify:
+  - where pricing pressure is increasing
+  - where brands are defending margin
+  - where brands are trying to take share
+  - where channel power is shifting
+
+5. Event & Platform Watch
 - 2 to 4 bullets maximum
 - only include events, leagues, tournaments, or media/platform items with clear commercial relevance
 - focus on:
@@ -255,6 +300,22 @@ WEEKLY COMBAT MARKET RADAR
   - monetization format changes
 - do NOT include pure sporting results
 - do NOT include generic event listings
+- if no commercially relevant event signals exist, explicitly state:
+  - "No major commercially relevant event signals detected this week"
+
+6. Prominent Fighters & Boxers Watch
+- 2 to 4 bullets maximum
+- only include fighters or boxers with clear commercial relevance
+- focus on:
+  - sponsorships
+  - endorsement deals
+  - branded merchandise
+  - collectibles
+  - event-driven demand pull
+  - crossover media momentum with visible commercial effect
+- include major names only when they are moving money, attention, or demand
+- if no commercially relevant fighter/boxer signals exist, explicitly state:
+  - "No major commercially relevant fighter or boxer signals detected this week"
 
 STYLE:
 - tight
@@ -271,6 +332,7 @@ QUALITY BAR:
 - prioritize what changed this week, not evergreen background
 - prioritize brands, channels, and pricing over tournaments and schedules
 - events should appear, but only as a short commercially filtered layer
+- fighters and boxers should appear, but only when commercially relevant
         `
       })
     });
@@ -291,7 +353,7 @@ QUALITY BAR:
             .flatMap(item => Array.isArray(item.content) ? item.content : [])
             .filter(contentItem => contentItem.type === "output_text" && contentItem.text)
             .map(contentItem => contentItem.text)
-            .join("\n")
+            .join("\\n")
         : "") ||
       "No briefing generated";
 
