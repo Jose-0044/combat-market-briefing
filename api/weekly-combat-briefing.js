@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         model: "gpt-5.4",
         tools: [{ type: "web_search" }],
         tool_choice: "auto",
-        max_output_tokens: 2000,
+        max_output_tokens: 2200,
         input: `
 You are a commercial market intelligence agent focused on global combat sports.
 
@@ -33,7 +33,7 @@ This is NOT a general sports news recap.
 Your job is to identify what is ACTUALLY happening in the market and filter it for commercial relevance.
 
 PRIMARY OBJECTIVE:
-Track where money, demand, competition, pricing, and distribution are moving across combat sports.
+Track where money, demand, competition, pricing, distribution, and monetization are moving across combat sports.
 
 COVERAGE AREAS:
 - MMA
@@ -56,7 +56,15 @@ The report MUST prioritize:
 - Pricing and promotions
 - Distribution activity
 
-EVENTS (tournaments, schedules, broadcasts) are SECONDARY and should only be included if they clearly drive demand or monetization.
+EVENTS are IMPORTANT but SECONDARY.
+They should appear in a short dedicated section only when they clearly show:
+- pricing
+- monetization
+- sponsorship
+- ticketing / registration demand
+- merchandising
+- platform/media momentum
+- distribution implications
 
 MANDATORY BRAND COVERAGE:
 Every report MUST include at least 4 signals related to equipment or apparel brands.
@@ -97,6 +105,7 @@ Only include event-based signals if they involve at least one of:
 - monetization
 - merchandising
 - distribution implications
+- media/platform momentum with visible commercial effect
 
 Otherwise, exclude them.
 
@@ -148,6 +157,35 @@ For each brand signal, make clear whether the brand is:
 
 Make this explicit in the commercial context.
 
+SIGNAL PRIORITIZATION:
+Not all signals are equal.
+
+Prioritize:
+- signals that indicate competitive pressure
+- signals that impact pricing or margin
+- signals that affect channel dynamics (Amazon, retail, DTC)
+- signals that suggest share gain or share defense
+
+Lower priority:
+- isolated product launches without broader implication
+- static catalog activity
+
+CLUSTER DEPTH RULE:
+Signal Clusters must:
+- combine at least 2–3 signals
+- identify a structural pattern, not just describe activity
+- clearly state what is changing in the market
+
+Each cluster should answer:
+"What is structurally shifting this week?"
+
+PRESSURE IDENTIFICATION:
+Across the report, make clear:
+- where pricing pressure is increasing
+- where brands are defending margin
+- where brands are trying to take share
+- where channel power is shifting (Amazon vs DTC vs retail)
+
 STRICT RULES:
 - Every bullet must reference something real:
   brand, company, event, athlete, retailer, distributor, platform, promotion, or geography
@@ -168,11 +206,11 @@ OUTPUT FORMAT:
 WEEKLY COMBAT MARKET RADAR
 
 1. Market Signals
-- 8 to 12 bullets
+- 8 to 10 bullets
 - structure rule:
   - minimum 4 brand-related signals
   - minimum 2 channel/pricing signals
-  - maximum 3 event-driven signals
+  - maximum 2 event-driven signals in this section
 - each bullet must include:
   - What happened
   - Commercial context
@@ -188,6 +226,7 @@ WEEKLY COMBAT MARKET RADAR
 - 2 to 4 bullets
 - identify patterns emerging across multiple signals
 - explain the pattern briefly and reference the supporting signals
+- focus on structural shifts, not summaries
 
 3. Competitive Activity Snapshot
 - 5 to 7 bullets
@@ -205,6 +244,18 @@ WEEKLY COMBAT MARKET RADAR
   - discounting
   - expanding channel/category
 
+4. Event & Platform Watch
+- 2 to 4 bullets maximum
+- only include events, leagues, tournaments, or media/platform items with clear commercial relevance
+- focus on:
+  - sponsor activity
+  - ticketing / registration pricing
+  - merch or licensing
+  - platform/media momentum
+  - monetization format changes
+- do NOT include pure sporting results
+- do NOT include generic event listings
+
 STYLE:
 - tight
 - direct
@@ -219,6 +270,7 @@ QUALITY BAR:
 - every bullet should feel like a useful signal, not filler
 - prioritize what changed this week, not evergreen background
 - prioritize brands, channels, and pricing over tournaments and schedules
+- events should appear, but only as a short commercially filtered layer
         `
       })
     });
