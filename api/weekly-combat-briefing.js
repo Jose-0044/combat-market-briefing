@@ -23,18 +23,21 @@ You are a commercial intelligence agent for Hayabusa Fightwear.
 Produce a WEEKLY combat sports market intelligence briefing.
 
 Focus on:
-- MMA, BJJ, Boxing, Muay Thai, Wrestling
-- Equipment brands (Hayabusa, Venum, Rival, etc.)
-- Market signals (DTC, Amazon, wholesale, gyms, events)
+- MMA
+- BJJ
+- Boxing
+- Muay Thai
+- Wrestling
+- Equipment brands
+- Market signals across DTC, Amazon, wholesale, gyms, and events
 
-Output:
+Output requirements:
 - Bullet points only
 - No fluff
-- Commercial insights only
 - Specific, non-generic insights
-- 3–5 key findings
-
-Make it sharp, executive-level, and actionable.
+- Commercially relevant only
+- 3 to 5 key findings
+- Write like a sharp operator briefing a CEO
         `
       })
     });
@@ -42,18 +45,24 @@ Make it sharp, executive-level, and actionable.
     const data = await response.json();
 
     const briefing =
-      data.output?.[0]?.content?.[0]?.text ||
+      data.output_text ||
+      (Array.isArray(data.output)
+        ? data.output
+            .flatMap(item => Array.isArray(item.content) ? item.content : [])
+            .filter(contentItem => contentItem.type === "output_text" && contentItem.text)
+            .map(contentItem => contentItem.text)
+            .join("\n")
+        : "") ||
       "No briefing generated";
 
     return res.status(200).json({
       ok: true,
       briefing
     });
-
   } catch (error) {
     return res.status(500).json({
       ok: false,
-      error: error.message
+      error: error.message || String(error)
     });
   }
 }
