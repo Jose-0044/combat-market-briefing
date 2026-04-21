@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         model: "gpt-5.4",
         tools: [{ type: "web_search" }],
         tool_choice: "auto",
-        max_output_tokens: 2800,
+        max_output_tokens: 4000,
         input: `
 You are a commercial market intelligence agent focused on global combat sports.
 
