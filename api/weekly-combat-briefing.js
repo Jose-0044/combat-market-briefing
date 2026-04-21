@@ -1,172 +1,148 @@
-function escapeHtml(str) {
-  return String(str || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-function textToHtml(text) {
-  const lines = String(text || "").split("\n");
-  let html = "";
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line) continue;
-
-    const upper = line.toUpperCase();
-
-    if (
-      upper === "KEY HIGHLIGHTS" ||
-      upper === "HAYABUSA RELATED" ||
-      upper === "SIGNAL CLUSTERS" ||
-      upper === "MARKET PRESSURE SIGNALS" ||
-      upper === "EVENT & PLATFORM WATCH" ||
-      upper === "PROMINENT FIGHTERS & BOXERS WATCH"
-    ) {
-      html += `<h2 style="margin:24px 0 12px;font-size:18px;font-weight:700;">${escapeHtml(line)}</h2>`;
-      continue;
-    }
-
-    if (line.startsWith("- ")) {
-      html += `<p style="margin:0 0 10px 0;line-height:1.6;">• ${escapeHtml(line.slice(2))}</p>`;
-      continue;
-    }
-
-    html += `<p style="margin:0 0 10px 0;line-height:1.6;">${escapeHtml(line)}</p>`;
-  }
-
-  return html;
-}
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // SAFE AUTH HANDLING
-  const auth = (req.headers.authorization || "").trim();
-  const expected = `Bearer ${process.env.ZAPIER_SECRET}`.trim();
-
-  if (auth !== expected) {
-    return res.status(401).json({
-      ok: false,
-      error: "Unauthorized",
-      received: auth
-    });
+  const auth = req.headers.authorization || "";
+  if (auth !== `Bearer ${process.env.ZAPIER_SECRET}`) {
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
   try {
-    const logoUrl = process.env.LOGO_URL || "";
-
     const prompt = `
-You are a commercial market intelligence agent focused on global combat sports.
+You are a senior strategy analyst producing a WEEKLY COMBAT MARKET INTELLIGENCE BRIEF.
 
-You are writing for the CEO of Hayabusa Fightwear.
+This is not marketing copy. This is a sharp, executive-level market read for leadership.
 
-Write a clean executive email in PLAIN TEXT.
+-------------------------------------
+STYLE RULES (CRITICAL)
+-------------------------------------
+- Write like an operator, not an AI
+- No phrases like: “signal:”, “commercially relevant because”, “this matters because”
+- No mention of “crawled”, “data pulled”, or similar
+- Short, sharp, insight-led bullets
+- Every bullet must answer: what changed, why it matters commercially
+- Focus 80% on MARKET, 20% on Hayabusa
+- Avoid fluff and generic commentary
 
-STRICT RULES:
-- NO markdown
-- NO ##
-- NO **
-- NO intro
-- NO closing
+-------------------------------------
+STRUCTURE (MANDATORY)
+-------------------------------------
 
-STRUCTURE:
+1. KEY HIGHLIGHTS
+- 6–10 bullets
+- Focus on:
+  - Brands (Hayabusa, Venum, Rival, RDX, Fairtex, Everlast)
+  - Media/platform shifts
+  - Pricing, promotions, retail moves
+  - Geographic relevance (US, Canada, UK, France, Germany, UAE)
 
-KEY HIGHLIGHTS
-- bullets
+2. HAYABUSA RELATED
+- 2–4 bullets max
+- Only meaningful commercial signals
+- Include Floyd Mayweather if relevant
 
-HAYABUSA RELATED
-- bullets
+3. COMBAT SECTOR SIGNALS
+- Rename from signal clusters
+- 2–3 structured insights:
+  - Media/platform evolution
+  - Pricing & margin behavior
+  - Federation / grassroots demand shaping
 
-SIGNAL CLUSTERS
-- bullets
+4. MARKET PRESSURE SIGNALS
+- Where pressure is coming from:
+  - pricing
+  - channels
+  - competitors
+  - platforms
 
-MARKET PRESSURE SIGNALS
-- bullets
+5. EVENT & PLATFORM WATCH
+- Key fight events, media deals, or platform changes
+- Include UFC, boxing, UAE events
 
-EVENT & PLATFORM WATCH
-- bullets
+6. PROMINENT FIGHTERS & BOXERS WATCH
+- Floyd Mayweather (MANDATORY every week if relevant)
+  - include broader media sentiment (positive OR negative)
+- Add notable fighters ONLY if commercially relevant
 
-PROMINENT FIGHTERS & BOXERS WATCH
-- bullets
+7. COMBAT CULTURE & MEDIA (NEW)
+- Track:
+  - Combat-related films (Mortal Kombat, Street Fighter, etc.)
+  - Marvel combat-related positioning if relevant
+  - Streaming or entertainment tie-ins
+- Only include if there is real movement or relevance
 
-RULES:
-- Last 7 days only
-- Focus on brands, pricing, distribution, monetization
-- Use USA, Canada, UK, France, Germany, UAE
-- Track: Hayabusa, Venum, Rival, RDX, Fairtex, Tatami, Scramble, Everlast, Sanabul
-- Include Marvel + Floyd Mayweather if relevant
-- Use sources like MMA Junkie, UFC, Ring Magazine, Boxingscene, IMMAF, UAE Warriors
+8. SOCIAL MEDIA & COMBAT (NEW)
+- Meta, TikTok, Instagram
+- What content is scaling:
+  - fight clips
+  - training content
+  - influencer trends
+- Platform-level behavior shifts (not vanity metrics)
 
-If no events:
-- write "No major commercially relevant event signals detected this week"
+-------------------------------------
+SOURCE PRIORITY
+-------------------------------------
+Use high-signal sources:
+- mmajunkie.usatoday.com
+- mmamania.com
+- ufc.com
+- sportingnews.com/uk
+- grapplinginsider.com
+- ringmagazine.com
+- boxingscene.com
+- fightnews.com
+- win-magazine.com
+- worldboxing.org
+- immaf.org
+- uaewarriors.com
+- gulftoday.ae
 
-If no fighters:
-- write both:
-- No major commercially relevant fighter or boxer signals detected this week
-- No major commercially relevant Marvel signals detected this week
+Also track:
+- Brand sites (Hayabusa, Rival, Venum, Fairtex, RDX, Everlast)
+- Media sentiment (Mayweather, Marvel)
+- Social platforms (Meta, TikTok, Instagram)
+
+-------------------------------------
+OUTPUT FORMAT
+-------------------------------------
+- Clean text (no markdown symbols like ** or ##)
+- Section headers in ALL CAPS
+- Bullet format with "-"
+- Tight spacing, readable in email
+
+-------------------------------------
+GOAL
+-------------------------------------
+This should read like a premium internal intelligence brief used by a CEO or PE firm.
+
+Generate now.
 `;
 
-    // 🔥 FIXED API CALL (stable config)
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const openaiRes = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-5",
-        tools: [{ type: "web_search_preview" }],
-        max_output_tokens: 3000,
+        model: "gpt-5.3",
         input: prompt
       })
     });
 
-    const data = await response.json();
-
-    // 🔍 FULL ERROR VISIBILITY
-    if (!response.ok) {
-      return res.status(response.status).json({
-        ok: false,
-        openai_error: data
-      });
-    }
-
-    const briefingText =
-      data.output_text ||
-      (Array.isArray(data.output)
-        ? data.output
-            .flatMap(item => Array.isArray(item.content) ? item.content : [])
-            .filter(item => item.type === "output_text" && item.text)
-            .map(item => item.text)
-            .join("\n")
-        : "") ||
-      "No briefing generated";
-
-    const briefingHtml = `
-      <div style="font-family:Arial,Helvetica,sans-serif;max-width:900px;margin:0 auto;background:#ffffff;color:#111;">
-        <div style="padding:20px;border-bottom:1px solid #e5e5e5;">
-          ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" style="max-height:50px;" />` : ""}
-        </div>
-        <div style="padding:20px;">
-          ${textToHtml(briefingText)}
-        </div>
-      </div>
-    `;
+    const data = await openaiRes.json();
+    const briefing = data.output_text || "No briefing generated.";
 
     return res.status(200).json({
       ok: true,
-      briefing_text: briefingText,
-      briefing_html: briefingHtml
+      briefing_text: briefing
     });
 
-  } catch (error) {
+  } catch (err) {
     return res.status(500).json({
-      ok: false,
-      error: error.message,
-      stack: error.stack
+      error: "Failed to generate briefing",
+      details: err.message
     });
   }
 }
