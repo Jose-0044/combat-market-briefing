@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         model: "gpt-5.4",
         tools: [{ type: "web_search" }],
         tool_choice: "auto",
-        max_output_tokens: 1800,
+        max_output_tokens: 2000,
         input: `
 You are a commercial market intelligence agent focused on global combat sports.
 
@@ -116,6 +116,38 @@ Only include signals that indicate one or more of:
 
 If a signal fails all five tests, discard it.
 
+SIGNAL SHARPNESS RULE:
+Each signal must clearly indicate one of the following:
+- Offensive move (trying to take share)
+- Defensive move (protecting share or margin)
+- Monetization expansion (new revenue layer)
+- Pricing pressure (up or down)
+- Channel leverage (retail, Amazon, DTC, wholesale)
+
+If the signal does not clearly fall into one of these:
+- discard it
+
+WEAK SIGNAL FILTER:
+Exclude signals that are:
+- static product listings without change
+- general brand presence without movement
+- retailer descriptions without activity
+- legacy SKUs unless tied to pricing, refresh, or push
+
+Only include signals that reflect:
+- change
+- motion
+- intent
+
+COMPETITIVE POSTURE LAYER:
+For each brand signal, make clear whether the brand is:
+- pushing (growth)
+- discounting (pressure)
+- defending (position)
+- expanding (new category or channel)
+
+Make this explicit in the commercial context.
+
 STRICT RULES:
 - Every bullet must reference something real:
   brand, company, event, athlete, retailer, distributor, platform, promotion, or geography
@@ -145,6 +177,12 @@ WEEKLY COMBAT MARKET RADAR
   - What happened
   - Commercial context
   - Signal type: Demand / Brand / Channel / Pricing / Distribution / Media
+- each bullet should make the commercial posture clear:
+  - offensive move
+  - defensive move
+  - monetization expansion
+  - pricing pressure
+  - channel leverage
 
 2. Signal Clusters
 - 2 to 4 bullets
@@ -161,6 +199,11 @@ WEEKLY COMBAT MARKET RADAR
   - promotions
   - distribution
   - channel activity
+- for each bullet, indicate whether the move is:
+  - pushing growth
+  - defending share
+  - discounting
+  - expanding channel/category
 
 STYLE:
 - tight
