@@ -12,7 +12,6 @@ function extractOutputText(data) {
   for (const item of data.output) {
     if (!item) continue;
 
-    // Standard assistant message structure
     if (item.type === "message" && Array.isArray(item.content)) {
       for (const content of item.content) {
         if (
@@ -26,7 +25,6 @@ function extractOutputText(data) {
       }
     }
 
-    // Defensive fallbacks
     if (typeof item.text === "string" && item.text.trim()) {
       parts.push(item.text.trim());
     }
@@ -43,6 +41,32 @@ function extractOutputText(data) {
   return parts.join("\n\n").trim();
 }
 
+async function callOpenAI({ apiKey, instructions, input, useWebSearch }) {
+  const body = {
+    model: "gpt-5.4",
+    reasoning: { effort: "low" },
+    instructions,
+    input,
+    max_output_tokens: 3500
+  };
+
+  if (useWebSearch) {
+    body.tools = [{ type: "web_search" }];
+  }
+
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+
+  const data = await response.json();
+  return { response, data };
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -52,23 +76,23 @@ export default async function handler(req, res) {
   const expected = `Bearer ${process.env.ZAPIER_SECRET || ""}`.trim();
 
   if (!process.env.ZAPIER_SECRET) {
-    return res.status(500).json({
-      ok: false,
-      error: "Missing ZAPIER_SECRET in Vercel environment variables"
+    return res.status(200).json({
+      ok: true,
+      briefing_text: "System note: ZAPIER_SECRET is missing in Vercel environment variables."
     });
   }
 
   if (!process.env.OPENAI_API_KEY) {
-    return res.status(500).json({
-      ok: false,
-      error: "Missing OPENAI_API_KEY in Vercel environment variables"
+    return res.status(200).json({
+      ok: true,
+      briefing_text: "System note: OPENAI_API_KEY is missing in Vercel environment variables."
     });
   }
 
   if (auth !== expected) {
-    return res.status(401).json({
-      ok: false,
-      error: "Unauthorized"
+    return res.status(200).json({
+      ok: true,
+      briefing_text: "System note: authorization failed. Check the Zapier Authorization header against Vercel ZAPIER_SECRET."
     });
   }
 
@@ -169,44 +193,48 @@ SOCIAL MEDIA & COMBAT
 `;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "gpt-5.4",
-        reasoning: { effort: "low" },
-        tools: [{ type: "web_search" }],
-        instructions,
-        input,
-        max_output_tokens: 4000
-      })
+    // Attempt 1: with web search
+    const first = await callOpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      instructions,
+      input,
+      useWebSearch: true
     });
 
-    const data = await response.json();
+    let briefingText = "";
+    let note = "";
 
-    if (!response.ok) {
-      return res.status(response.status).json({
-        ok: false,
-        openai_error: data
-      });
+    if (first.response.ok) {
+      briefingText = extractOutputText(first.data);
+    } else {
+      note = `Web-search attempt failed with status ${first.response.status}.`;
     }
 
-    const briefingText = extractOutputText(data);
+    // Attempt 2: fallback without web search if first attempt failed or returned no visible text
+    if (!briefingText) {
+      const second = await callOpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+        instructions,
+        input,
+        useWebSearch: false
+      });
+
+      if (second.response.ok) {
+        briefingText = extractOutputText(second.data);
+        if (briefingText && note) {
+          briefingText = `${briefingText}\n\n- System note: ${note} Fallback run completed without web search.`;
+        }
+      } else if (!note) {
+        note = `Fallback attempt failed with status ${second.response.status}.`;
+      }
+    }
 
     if (!briefingText) {
-      return res.status(200).json({
-        ok: true,
-        briefing_text: "No briefing generated.",
-        debug: {
-          output_text_present: !!data.output_text,
-          output_items: Array.isArray(data.output)
-            ? data.output.map(item => item.type)
-            : []
-        }
-      });
+      briefingText =
+        "System note: briefing generation did not return visible text this run. The endpoint is live, but the model response was empty or not parseable. Retest the Zap once more; if the issue persists, reduce scope or token count.";
+      if (note) {
+        briefingText += `\n\n- Additional note: ${note}`;
+      }
     }
 
     return res.status(200).json({
@@ -214,9 +242,9 @@ SOCIAL MEDIA & COMBAT
       briefing_text: briefingText
     });
   } catch (error) {
-    return res.status(500).json({
-      ok: false,
-      error: error.message || String(error)
+    return res.status(200).json({
+      ok: true,
+      briefing_text: `System note: runtime error during briefing generation: ${error.message || String(error)}`
     });
   }
 }
