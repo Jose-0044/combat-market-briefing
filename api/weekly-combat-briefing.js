@@ -1,148 +1,242 @@
+function extractOutputText(data) {
+  if (!data) return "";
+
+  if (typeof data.output_text === "string" && data.output_text.trim()) {
+    return data.output_text.trim();
+  }
+
+  if (!Array.isArray(data.output)) return "";
+
+  const chunks = [];
+
+  for (const item of data.output) {
+    if (!item) continue;
+
+    // Standard assistant message path
+    if (item.type === "message" && Array.isArray(item.content)) {
+      for (const content of item.content) {
+        if (
+          content &&
+          content.type === "output_text" &&
+          typeof content.text === "string" &&
+          content.text.trim()
+        ) {
+          chunks.push(content.text.trim());
+        }
+      }
+    }
+
+    // Defensive fallback in case text appears elsewhere
+    if (typeof item.text === "string" && item.text.trim()) {
+      chunks.push(item.text.trim());
+    }
+
+    if (Array.isArray(item.content)) {
+      for (const content of item.content) {
+        if (typeof content?.text === "string" && content.text.trim()) {
+          chunks.push(content.text.trim());
+        }
+      }
+    }
+  }
+
+  return chunks.join("\n\n").trim();
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const auth = req.headers.authorization || "";
-  if (auth !== `Bearer ${process.env.ZAPIER_SECRET}`) {
-    return res.status(401).json({ error: "Unauthorized" });
+  const auth = (req.headers.authorization || "").trim();
+  const expected = `Bearer ${process.env.ZAPIER_SECRET || ""}`.trim();
+
+  if (!process.env.ZAPIER_SECRET) {
+    return res.status(500).json({
+      ok: false,
+      error: "Missing ZAPIER_SECRET in Vercel environment variables"
+    });
+  }
+
+  if (!process.env.OPENAI_API_KEY) {
+    return res.status(500).json({
+      ok: false,
+      error: "Missing OPENAI_API_KEY in Vercel environment variables"
+    });
+  }
+
+  if (auth !== expected) {
+    return res.status(401).json({
+      ok: false,
+      error: "Unauthorized"
+    });
+  }
+
+  const instructions = `
+You are a senior strategy analyst producing a weekly combat market intelligence brief for the CEO of Hayabusa Fightwear.
+
+Write like an operator, not an AI.
+Do not use markdown symbols such as ## or **.
+Do not say "Good morning".
+Do not mention crawling, scraping, data pulls, or source retrieval mechanics.
+
+Focus on the last 7 days only.
+
+Research priorities:
+- Track brands, pricing, promotions, channels, distribution, monetization, platform shifts
+- Search beyond brand-owned sites and include independent media and trade coverage
+- Countries: USA, Canada, UK, France, Germany, UAE
+- Brands: Hayabusa, Venum, Rival, RDX, Fairtex, Tatami, Scramble, Everlast, Sanabul, Engage, TITLE Boxing
+- Always check for relevant developments on Floyd Mayweather and Marvel
+- Consider combat film/TV projects if commercially relevant, including Mortal Kombat, Street Fighter, and similar pipeline projects
+- Include social/media platform behavior across Meta, TikTok, and Instagram when commercially relevant
+
+Priority sources when relevant:
+mmajunkie.usatoday.com
+mmamania.com
+ufc.com
+sportingnews.com/uk
+grapplinginsider.com
+reviewjournal.com
+ringmagazine.com
+boxingscene.com
+win-magazine.com
+worldboxing.org
+fightnews.com
+uaewarriors.com
+gulftoday.ae
+immaf.org
+`;
+
+  const input = `
+Return clean plain text only, using exactly these section headers:
+
+KEY HIGHLIGHTS
+HAYABUSA RELATED
+COMBAT SECTOR SIGNALS
+MARKET PRESSURE SIGNALS
+EVENT & PLATFORM WATCH
+PROMINENT FIGHTERS & BOXERS WATCH
+SOCIAL MEDIA & COMBAT
+
+Format:
+- Use simple dash bullets
+- No markdown bold
+- No numbering
+- No intro paragraph
+- No closing signature
+
+Rules by section:
+
+KEY HIGHLIGHTS
+- 8 to 10 bullets
+- first 2 to 3 bullets should be the highest-impact developments of the week
+- no Hayabusa bullets in this section
+
+HAYABUSA RELATED
+- 2 to 4 bullets
+- Hayabusa only
+- include Floyd Mayweather here if relevant to Hayabusa
+
+COMBAT SECTOR SIGNALS
+- 2 to 4 bullets
+- structural shifts across brands, pricing, distribution, media, participation, or platform economics
+
+MARKET PRESSURE SIGNALS
+- up to 4 bullets
+- explicitly identify pricing pressure, margin defense, share-taking, and channel shifts
+
+EVENT & PLATFORM WATCH
+- 2 to 4 bullets if relevant
+- otherwise write exactly:
+- No major commercially relevant event signals detected this week
+
+PROMINENT FIGHTERS & BOXERS WATCH
+- 2 to 4 bullets if relevant
+- include Floyd Mayweather if relevant
+- include wider media sentiment if commercially relevant
+- include Marvel if relevant to fighters/combat/entertainment crossover
+- otherwise write exactly:
+- No major commercially relevant fighter or boxer signals detected this week
+- No major commercially relevant Marvel signals detected this week
+
+SOCIAL MEDIA & COMBAT
+- 2 to 4 bullets
+- focus on Meta, TikTok, Instagram
+- identify commercially relevant creator/content/platform trends only
+- if nothing material is found, write exactly:
+- No major commercially relevant social media combat signals detected this week
+`;
+
+  async function runOpenAI(useWebSearch) {
+    const body = {
+      model: "gpt-5.4",
+      reasoning: { effort: "low" },
+      instructions,
+      input,
+      max_output_tokens: 4000
+    };
+
+    if (useWebSearch) {
+      body.tools = [{ type: "web_search" }];
+    }
+
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+
+    const data = await response.json();
+    return { response, data };
   }
 
   try {
-    const prompt = `
-You are a senior strategy analyst producing a WEEKLY COMBAT MARKET INTELLIGENCE BRIEF.
+    // First attempt: with web search
+    let { response, data } = await runOpenAI(true);
 
-This is not marketing copy. This is a sharp, executive-level market read for leadership.
+    if (!response.ok) {
+      return res.status(response.status).json({
+        ok: false,
+        openai_error: data
+      });
+    }
 
--------------------------------------
-STYLE RULES (CRITICAL)
--------------------------------------
-- Write like an operator, not an AI
-- No phrases like: “signal:”, “commercially relevant because”, “this matters because”
-- No mention of “crawled”, “data pulled”, or similar
-- Short, sharp, insight-led bullets
-- Every bullet must answer: what changed, why it matters commercially
-- Focus 80% on MARKET, 20% on Hayabusa
-- Avoid fluff and generic commentary
+    let briefingText = extractOutputText(data);
 
--------------------------------------
-STRUCTURE (MANDATORY)
--------------------------------------
+    // Fallback: retry once without web search if no visible text returned
+    if (!briefingText) {
+      const fallback = await runOpenAI(false);
 
-1. KEY HIGHLIGHTS
-- 6–10 bullets
-- Focus on:
-  - Brands (Hayabusa, Venum, Rival, RDX, Fairtex, Everlast)
-  - Media/platform shifts
-  - Pricing, promotions, retail moves
-  - Geographic relevance (US, Canada, UK, France, Germany, UAE)
+      if (!fallback.response.ok) {
+        return res.status(fallback.response.status).json({
+          ok: false,
+          openai_error: fallback.data
+        });
+      }
 
-2. HAYABUSA RELATED
-- 2–4 bullets max
-- Only meaningful commercial signals
-- Include Floyd Mayweather if relevant
+      briefingText = extractOutputText(fallback.data);
+    }
 
-3. COMBAT SECTOR SIGNALS
-- Rename from signal clusters
-- 2–3 structured insights:
-  - Media/platform evolution
-  - Pricing & margin behavior
-  - Federation / grassroots demand shaping
-
-4. MARKET PRESSURE SIGNALS
-- Where pressure is coming from:
-  - pricing
-  - channels
-  - competitors
-  - platforms
-
-5. EVENT & PLATFORM WATCH
-- Key fight events, media deals, or platform changes
-- Include UFC, boxing, UAE events
-
-6. PROMINENT FIGHTERS & BOXERS WATCH
-- Floyd Mayweather (MANDATORY every week if relevant)
-  - include broader media sentiment (positive OR negative)
-- Add notable fighters ONLY if commercially relevant
-
-7. COMBAT CULTURE & MEDIA (NEW)
-- Track:
-  - Combat-related films (Mortal Kombat, Street Fighter, etc.)
-  - Marvel combat-related positioning if relevant
-  - Streaming or entertainment tie-ins
-- Only include if there is real movement or relevance
-
-8. SOCIAL MEDIA & COMBAT (NEW)
-- Meta, TikTok, Instagram
-- What content is scaling:
-  - fight clips
-  - training content
-  - influencer trends
-- Platform-level behavior shifts (not vanity metrics)
-
--------------------------------------
-SOURCE PRIORITY
--------------------------------------
-Use high-signal sources:
-- mmajunkie.usatoday.com
-- mmamania.com
-- ufc.com
-- sportingnews.com/uk
-- grapplinginsider.com
-- ringmagazine.com
-- boxingscene.com
-- fightnews.com
-- win-magazine.com
-- worldboxing.org
-- immaf.org
-- uaewarriors.com
-- gulftoday.ae
-
-Also track:
-- Brand sites (Hayabusa, Rival, Venum, Fairtex, RDX, Everlast)
-- Media sentiment (Mayweather, Marvel)
-- Social platforms (Meta, TikTok, Instagram)
-
--------------------------------------
-OUTPUT FORMAT
--------------------------------------
-- Clean text (no markdown symbols like ** or ##)
-- Section headers in ALL CAPS
-- Bullet format with "-"
-- Tight spacing, readable in email
-
--------------------------------------
-GOAL
--------------------------------------
-This should read like a premium internal intelligence brief used by a CEO or PE firm.
-
-Generate now.
-`;
-
-    const openaiRes = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "gpt-5.3",
-        input: prompt
-      })
-    });
-
-    const data = await openaiRes.json();
-    const briefing = data.output_text || "No briefing generated.";
+    if (!briefingText) {
+      return res.status(200).json({
+        ok: true,
+        briefing_text: "No briefing generated.",
+        debug_note: "The model returned no visible text output."
+      });
+    }
 
     return res.status(200).json({
       ok: true,
-      briefing_text: briefing
+      briefing_text: briefingText
     });
-
-  } catch (err) {
+  } catch (error) {
     return res.status(500).json({
-      error: "Failed to generate briefing",
-      details: err.message
+      ok: false,
+      error: error.message || String(error)
     });
   }
 }
