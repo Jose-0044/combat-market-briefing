@@ -41,32 +41,6 @@ function extractOutputText(data) {
   return parts.join("\n\n").trim();
 }
 
-async function callOpenAI({ apiKey, instructions, input, useWebSearch }) {
-  const body = {
-    model: "gpt-5.4",
-    reasoning: { effort: "low" },
-    instructions,
-    input,
-    max_output_tokens: 3500
-  };
-
-  if (useWebSearch) {
-    body.tools = [{ type: "web_search" }];
-  }
-
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(body)
-  });
-
-  const data = await response.json();
-  return { response, data };
-}
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -112,8 +86,6 @@ Research priorities:
 - Countries: USA, Canada, UK, France, Germany, UAE
 - Brands: Hayabusa, Venum, Rival, RDX, Fairtex, Tatami, Scramble, Everlast, Sanabul, Engage, TITLE Boxing
 - Always check for relevant developments on Floyd Mayweather and Marvel
-- Consider combat film/TV projects if commercially relevant, including Mortal Kombat, Street Fighter, and similar pipeline projects
-- Include social/media platform behavior across Meta, TikTok, and Instagram when commercially relevant
 
 Priority sources when relevant:
 mmajunkie.usatoday.com
@@ -137,11 +109,10 @@ Return clean plain text only, using exactly these section headers:
 
 KEY HIGHLIGHTS
 HAYABUSA RELATED
-COMBAT SECTOR SIGNALS
+SIGNAL CLUSTERS
 MARKET PRESSURE SIGNALS
 EVENT & PLATFORM WATCH
 PROMINENT FIGHTERS & BOXERS WATCH
-SOCIAL MEDIA & COMBAT
 
 Format:
 - Use simple dash bullets
@@ -162,7 +133,7 @@ HAYABUSA RELATED
 - Hayabusa items only
 - include Floyd Mayweather here if relevant
 
-COMBAT SECTOR SIGNALS
+SIGNAL CLUSTERS
 - 2 to 4 bullets
 - structural shifts across brands, pricing, distribution, media, participation, or platform economics
 
@@ -183,58 +154,41 @@ PROMINENT FIGHTERS & BOXERS WATCH
 - otherwise write exactly:
 - No major commercially relevant fighter or boxer signals detected this week
 - No major commercially relevant Marvel signals detected this week
-
-SOCIAL MEDIA & COMBAT
-- 2 to 4 bullets
-- focus on Meta, TikTok, Instagram
-- identify commercially relevant creator/content/platform trends only
-- if nothing material is found, write exactly:
-- No major commercially relevant social media combat signals detected this week
 `;
 
   try {
-    // Attempt 1: with web search
-    const first = await callOpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      instructions,
-      input,
-      useWebSearch: true
-    });
-
-    let briefingText = "";
-    let note = "";
-
-    if (first.response.ok) {
-      briefingText = extractOutputText(first.data);
-    } else {
-      note = `Web-search attempt failed with status ${first.response.status}.`;
-    }
-
-    // Attempt 2: fallback without web search if first attempt failed or returned no visible text
-    if (!briefingText) {
-      const second = await callOpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-5.4",
+        reasoning: { effort: "low" },
+        tools: [{ type: "web_search" }],
         instructions,
         input,
-        useWebSearch: false
-      });
+        max_output_tokens: 3200
+      })
+    });
 
-      if (second.response.ok) {
-        briefingText = extractOutputText(second.data);
-        if (briefingText && note) {
-          briefingText = `${briefingText}\n\n- System note: ${note} Fallback run completed without web search.`;
-        }
-      } else if (!note) {
-        note = `Fallback attempt failed with status ${second.response.status}.`;
-      }
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(200).json({
+        ok: true,
+        briefing_text: `System note: OpenAI request failed with status ${response.status}.`
+      });
     }
 
+    const briefingText = extractOutputText(data);
+
     if (!briefingText) {
-      briefingText =
-        "System note: briefing generation did not return visible text this run. The endpoint is live, but the model response was empty or not parseable. Retest the Zap once more; if the issue persists, reduce scope or token count.";
-      if (note) {
-        briefingText += `\n\n- Additional note: ${note}`;
-      }
+      return res.status(200).json({
+        ok: true,
+        briefing_text: "No briefing generated."
+      });
     }
 
     return res.status(200).json({
