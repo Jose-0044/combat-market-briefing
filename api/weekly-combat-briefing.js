@@ -1,44 +1,41 @@
-function extractOutputText(data) {
-  if (!data) return "";
+function escapeHtml(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
 
-  if (typeof data.output_text === "string" && data.output_text.trim()) {
-    return data.output_text.trim();
+function textToHtml(text) {
+  const lines = String(text || "").split("\n");
+  let html = "";
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    const upper = line.toUpperCase();
+
+    if (
+      upper === "KEY HIGHLIGHTS" ||
+      upper === "HAYABUSA RELATED" ||
+      upper === "SIGNAL CLUSTERS" ||
+      upper === "MARKET PRESSURE SIGNALS" ||
+      upper === "EVENT & PLATFORM WATCH" ||
+      upper === "PROMINENT FIGHTERS & BOXERS WATCH"
+    ) {
+      html += `<h2 style="margin:24px 0 12px;font-size:18px;font-weight:700;">${escapeHtml(line)}</h2>`;
+      continue;
+    }
+
+    if (line.startsWith("- ")) {
+      html += `<p style="margin:0 0 10px 0;line-height:1.6;">• ${escapeHtml(line.slice(2))}</p>`;
+      continue;
+    }
+
+    html += `<p style="margin:0 0 10px 0;line-height:1.6;">${escapeHtml(line)}</p>`;
   }
 
-  if (!Array.isArray(data.output)) return "";
-
-  const parts = [];
-
-  for (const item of data.output) {
-    if (!item) continue;
-
-    if (item.type === "message" && Array.isArray(item.content)) {
-      for (const content of item.content) {
-        if (
-          content &&
-          content.type === "output_text" &&
-          typeof content.text === "string" &&
-          content.text.trim()
-        ) {
-          parts.push(content.text.trim());
-        }
-      }
-    }
-
-    if (typeof item.text === "string" && item.text.trim()) {
-      parts.push(item.text.trim());
-    }
-
-    if (Array.isArray(item.content)) {
-      for (const content of item.content) {
-        if (typeof content?.text === "string" && content.text.trim()) {
-          parts.push(content.text.trim());
-        }
-      }
-    }
-  }
-
-  return parts.join("\n\n").trim();
+  return html;
 }
 
 export default async function handler(req, res) {
@@ -46,117 +43,73 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  // SAFE AUTH HANDLING
   const auth = (req.headers.authorization || "").trim();
-  const expected = `Bearer ${process.env.ZAPIER_SECRET || ""}`.trim();
-
-  if (!process.env.ZAPIER_SECRET) {
-    return res.status(200).json({
-      ok: true,
-      briefing_text: "System note: ZAPIER_SECRET is missing in Vercel environment variables."
-    });
-  }
-
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(200).json({
-      ok: true,
-      briefing_text: "System note: OPENAI_API_KEY is missing in Vercel environment variables."
-    });
-  }
+  const expected = `Bearer ${process.env.ZAPIER_SECRET}`.trim();
 
   if (auth !== expected) {
-    return res.status(200).json({
-      ok: true,
-      briefing_text: "System note: authorization failed. Check the Zapier Authorization header against Vercel ZAPIER_SECRET."
+    return res.status(401).json({
+      ok: false,
+      error: "Unauthorized",
+      received: auth
     });
   }
 
-  const instructions = `
-You are a senior strategy analyst producing a weekly combat market intelligence brief for the CEO of Hayabusa Fightwear.
+  try {
+    const logoUrl = process.env.LOGO_URL || "";
 
-Write like an operator, not an AI.
-Do not use markdown symbols such as ## or **.
-Do not say "Good morning".
-Do not mention crawling, scraping, data pulls, or source retrieval mechanics.
+    const prompt = `
+You are a commercial market intelligence agent focused on global combat sports.
 
-Focus on the last 7 days only.
+You are writing for the CEO of Hayabusa Fightwear.
 
-Research priorities:
-- Track brands, pricing, promotions, channels, distribution, monetization, platform shifts
-- Search beyond brand-owned sites and include independent media and trade coverage
-- Countries: USA, Canada, UK, France, Germany, UAE
-- Brands: Hayabusa, Venum, Rival, RDX, Fairtex, Tatami, Scramble, Everlast, Sanabul, Engage, TITLE Boxing
-- Always check for relevant developments on Floyd Mayweather and Marvel
+Write a clean executive email in PLAIN TEXT.
 
-Priority sources when relevant:
-mmajunkie.usatoday.com
-mmamania.com
-ufc.com
-sportingnews.com/uk
-grapplinginsider.com
-reviewjournal.com
-ringmagazine.com
-boxingscene.com
-win-magazine.com
-worldboxing.org
-fightnews.com
-uaewarriors.com
-gulftoday.ae
-immaf.org
-`;
+STRICT RULES:
+- NO markdown
+- NO ##
+- NO **
+- NO intro
+- NO closing
 
-  const input = `
-Return clean plain text only, using exactly these section headers:
+STRUCTURE:
 
 KEY HIGHLIGHTS
-HAYABUSA RELATED
-SIGNAL CLUSTERS
-MARKET PRESSURE SIGNALS
-EVENT & PLATFORM WATCH
-PROMINENT FIGHTERS & BOXERS WATCH
-
-Format:
-- Use simple dash bullets
-- No markdown bold
-- No numbering
-- No intro paragraph
-- No closing signature
-
-Rules by section:
-
-KEY HIGHLIGHTS
-- 8 to 10 bullets
-- first 2 to 3 bullets should be the highest-impact developments of the week
-- no Hayabusa bullets in this section
+- bullets
 
 HAYABUSA RELATED
-- 2 to 4 bullets
-- Hayabusa items only
-- include Floyd Mayweather here if relevant
+- bullets
 
 SIGNAL CLUSTERS
-- 2 to 4 bullets
-- structural shifts across brands, pricing, distribution, media, participation, or platform economics
+- bullets
 
 MARKET PRESSURE SIGNALS
-- up to 4 bullets
-- explicitly identify pricing pressure, margin defense, share-taking, and channel shifts
+- bullets
 
 EVENT & PLATFORM WATCH
-- 2 to 4 bullets if relevant
-- otherwise write exactly:
-- No major commercially relevant event signals detected this week
+- bullets
 
 PROMINENT FIGHTERS & BOXERS WATCH
-- 2 to 4 bullets if relevant
-- include Floyd Mayweather if relevant
-- include wider media sentiment if commercially relevant
-- include Marvel if relevant to fighters/combat/entertainment crossover
-- otherwise write exactly:
+- bullets
+
+RULES:
+- Last 7 days only
+- Focus on brands, pricing, distribution, monetization
+- Use USA, Canada, UK, France, Germany, UAE
+- Track: Hayabusa, Venum, Rival, RDX, Fairtex, Tatami, Scramble, Everlast, Sanabul
+- Include Marvel + Floyd Mayweather if relevant
+- Use sources like MMA Junkie, UFC, Ring Magazine, Boxingscene, IMMAF, UAE Warriors
+
+If no events:
+- write "No major commercially relevant event signals detected this week"
+
+If no fighters:
+- write both:
 - No major commercially relevant fighter or boxer signals detected this week
 - No major commercially relevant Marvel signals detected this week
 `;
 
-  try {
+    // 🔥 FIXED API CALL (stable config)
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -164,41 +117,56 @@ PROMINENT FIGHTERS & BOXERS WATCH
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-5.4",
-        reasoning: { effort: "low" },
-        tools: [{ type: "web_search" }],
-        instructions,
-        input,
-        max_output_tokens: 3200
+        model: "gpt-5",
+        tools: [{ type: "web_search_preview" }],
+        max_output_tokens: 3000,
+        input: prompt
       })
     });
 
     const data = await response.json();
 
+    // 🔍 FULL ERROR VISIBILITY
     if (!response.ok) {
-      return res.status(200).json({
-        ok: true,
-        briefing_text: `System note: OpenAI request failed with status ${response.status}.`
+      return res.status(response.status).json({
+        ok: false,
+        openai_error: data
       });
     }
 
-    const briefingText = extractOutputText(data);
+    const briefingText =
+      data.output_text ||
+      (Array.isArray(data.output)
+        ? data.output
+            .flatMap(item => Array.isArray(item.content) ? item.content : [])
+            .filter(item => item.type === "output_text" && item.text)
+            .map(item => item.text)
+            .join("\n")
+        : "") ||
+      "No briefing generated";
 
-    if (!briefingText) {
-      return res.status(200).json({
-        ok: true,
-        briefing_text: "No briefing generated."
-      });
-    }
+    const briefingHtml = `
+      <div style="font-family:Arial,Helvetica,sans-serif;max-width:900px;margin:0 auto;background:#ffffff;color:#111;">
+        <div style="padding:20px;border-bottom:1px solid #e5e5e5;">
+          ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" style="max-height:50px;" />` : ""}
+        </div>
+        <div style="padding:20px;">
+          ${textToHtml(briefingText)}
+        </div>
+      </div>
+    `;
 
     return res.status(200).json({
       ok: true,
-      briefing_text: briefingText
+      briefing_text: briefingText,
+      briefing_html: briefingHtml
     });
+
   } catch (error) {
-    return res.status(200).json({
-      ok: true,
-      briefing_text: `System note: runtime error during briefing generation: ${error.message || String(error)}`
+    return res.status(500).json({
+      ok: false,
+      error: error.message,
+      stack: error.stack
     });
   }
 }
