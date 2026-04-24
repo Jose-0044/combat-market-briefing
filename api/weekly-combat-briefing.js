@@ -92,7 +92,10 @@ export default async function handler(req, res) {
   const prompt = `
 You are a senior commercial market intelligence analyst producing a weekly combat market briefing for the CEO of Hayabusa Fightwear.
 
-Write like an operator, not an AI.
+Use live web search, but keep the research narrow and efficient.
+
+Goal:
+Find 5 to 7 current, commercially relevant combat market signals from the last 7 days.
 
 Hayabusa context:
 - Premium combat performance brand
@@ -100,16 +103,17 @@ Hayabusa context:
 - Key channels: DTC, Amazon, wholesale, gyms, distributors, international expansion
 - Key watch areas: premium positioning, pricing pressure, BJJ/no-gi growth, boxing hardgoods pressure, UFC/TKO/BJJ activity, gaming/film/combat culture adjacencies
 
-Avoid these phrases:
-- crawled
-- freshly crawled
-- page was crawled
-- this matters because
-- commercially relevant because
-- signal:
-- the market is evolving
+Prioritize:
+- Brand moves
+- Pricing / promotions
+- Channel shifts
+- Distribution
+- Media/platform monetization
+- Event monetization
+- Fighter or boxer commercial relevance
+- Combat culture/media only if commercially relevant
 
-Track:
+Track if visible:
 - Hayabusa
 - Venum
 - Rival
@@ -125,9 +129,14 @@ Track:
 - Marvel
 - Mortal Kombat
 - Street Fighter
-- combat film, gaming, and entertainment crossover activity
 
-Return the briefing in this exact format ONCE ONLY:
+Use credible current public sources.
+Do not force weak items.
+Do not over-search.
+Do not mention crawling, scraping, or data retrieval.
+Do not use phrases like "this matters because", "commercially relevant because", or "signal:".
+
+Return the briefing ONCE ONLY in this exact format:
 
 Good morning, please find your weekly market highlights below:
 
@@ -162,8 +171,6 @@ COMBAT CULTURE & MEDIA
 The Hayabusa AI market insight agent
 
 Rules:
-- Output the full briefing once only
-- Do not repeat the briefing
 - Plain text only
 - No markdown
 - No ##
@@ -172,43 +179,40 @@ Rules:
 - Simple dash bullets only
 - No duplicate sections
 - No duplicate bullets
+- Do not repeat the briefing
 - Keep it concise
-- Do not invent specific current news if you are unsure
-- If current data is not available, provide cautious market-watch framing rather than pretending to have live data
 
 KEY HIGHLIGHTS:
 - 5 to 7 bullets
 - external market only
 - no Hayabusa bullets
-- prioritize pricing, channels, media/platform shifts, distribution, brand movement
 
 HAYABUSA RELATED:
-- 2 to 3 bullets
+- 1 to 3 bullets
 - Hayabusa only
 - include Mayweather if relevant to Hayabusa
 
 COMBAT SECTOR SIGNALS:
-- 2 bullets
+- 2 bullets max
 - structural market shifts only
 
 MARKET PRESSURE SIGNALS:
-- up to 3 bullets
+- 2 bullets max
 - pricing pressure, margin defense, share-taking, channel power
 
 EVENT & PLATFORM WATCH:
-- 1 to 3 bullets if relevant
+- 1 to 2 bullets if relevant
 - otherwise write:
 - No major commercially relevant event signals detected this week
 
 PROMINENT FIGHTERS & BOXERS WATCH:
-- 1 to 3 bullets if relevant
+- 1 to 2 bullets if relevant
 - include Floyd Mayweather if relevant
-- include media sentiment if commercially relevant
 - otherwise write:
 - No major commercially relevant fighter or boxer signals detected this week
 
 COMBAT CULTURE & MEDIA:
-- 1 to 3 bullets if relevant
+- 1 to 2 bullets if relevant
 - include Marvel, Mortal Kombat, Street Fighter, gaming, film, entertainment crossover if commercially relevant
 - otherwise write:
 - No major commercially relevant combat culture or media signals detected this week
@@ -223,9 +227,11 @@ COMBAT CULTURE & MEDIA:
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-5-mini",
+        model: "gpt-5.4",
+        reasoning: { effort: "low" },
+        tools: [{ type: "web_search" }],
         input: prompt,
-        max_output_tokens: 1800
+        max_output_tokens: 2200
       })
     });
 
@@ -234,7 +240,7 @@ COMBAT CULTURE & MEDIA:
     if (!response.ok) {
       return res.status(200).json({
         ok: true,
-        briefing_text: `System note: OpenAI request failed with status ${response.status}.`
+        briefing_text: `System note: OpenAI web-search request failed with status ${response.status}.`
       });
     }
 
@@ -256,7 +262,7 @@ COMBAT CULTURE & MEDIA:
   } catch (error) {
     return res.status(200).json({
       ok: true,
-      briefing_text: `System note: runtime error during briefing generation: ${error.message || String(error)}`
+      briefing_text: `System note: runtime error during web-search briefing generation: ${error.message || String(error)}`
     });
   }
 }
