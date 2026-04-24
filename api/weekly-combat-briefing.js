@@ -41,6 +41,21 @@ function extractOutputText(data) {
   return parts.join("\n\n").trim();
 }
 
+function removeDuplicateBriefing(text) {
+  if (!text) return "";
+
+  const marker = "Good morning, please find your weekly market highlights below:";
+  const firstIndex = text.indexOf(marker);
+
+  if (firstIndex === -1) return text.trim();
+
+  const secondIndex = text.indexOf(marker, firstIndex + marker.length);
+
+  if (secondIndex === -1) return text.trim();
+
+  return text.slice(firstIndex, secondIndex).trim();
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -112,7 +127,7 @@ Track:
 - Street Fighter
 - combat film, gaming, and entertainment crossover activity
 
-Return the briefing in this exact format:
+Return the briefing in this exact format ONCE ONLY:
 
 Good morning, please find your weekly market highlights below:
 
@@ -147,6 +162,8 @@ COMBAT CULTURE & MEDIA
 The Hayabusa AI market insight agent
 
 Rules:
+- Output the full briefing once only
+- Do not repeat the briefing
 - Plain text only
 - No markdown
 - No ##
@@ -221,14 +238,16 @@ COMBAT CULTURE & MEDIA:
       });
     }
 
-    const briefingText = extractOutputText(data);
+    const rawBriefingText = extractOutputText(data);
 
-    if (!briefingText) {
+    if (!rawBriefingText) {
       return res.status(200).json({
         ok: true,
         briefing_text: "No briefing generated."
       });
     }
+
+    const briefingText = removeDuplicateBriefing(rawBriefingText);
 
     return res.status(200).json({
       ok: true,
