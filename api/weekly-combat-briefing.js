@@ -70,20 +70,20 @@ export default async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       briefing_text:
-        "System note: authorization failed. Check the Zapier Authorization header against Vercel ZAPIER_SECRET."
+        "System note: authorization failed. Check Zapier Authorization header and Vercel ZAPIER_SECRET."
     });
   }
 
-  const instructions = `
+  const prompt = `
 You are a senior commercial market intelligence analyst producing a weekly combat market briefing for the CEO of Hayabusa Fightwear.
+
+Write like an operator, not an AI.
 
 Hayabusa context:
 - Premium combat performance brand
 - Core categories: boxing gloves, BJJ/grappling apparel, protective equipment, combat apparel
 - Key channels: DTC, Amazon, wholesale, gyms, distributors, international expansion
 - Key watch areas: premium positioning, pricing pressure, BJJ/no-gi growth, boxing hardgoods pressure, UFC/TKO/BJJ activity, gaming/film/combat culture adjacencies
-
-Write like an operator, not an AI.
 
 Avoid these phrases:
 - crawled
@@ -93,8 +93,6 @@ Avoid these phrases:
 - commercially relevant because
 - signal:
 - the market is evolving
-
-Focus on the last 7 days only.
 
 Track:
 - Hayabusa
@@ -108,26 +106,12 @@ Track:
 - Sanabul
 - Engage
 - TITLE Boxing
-
-Countries to consider:
-- USA
-- Canada
-- UK
-- France
-- Germany
-- UAE
-
-Also check if relevant:
 - Floyd Mayweather
 - Marvel
 - Mortal Kombat
 - Street Fighter
 - combat film, gaming, and entertainment crossover activity
 
-Use credible public web sources. Do not force weak items.
-`;
-
-  const input = `
 Return the briefing in this exact format:
 
 Good morning, please find your weekly market highlights below:
@@ -171,6 +155,9 @@ Rules:
 - Simple dash bullets only
 - No duplicate sections
 - No duplicate bullets
+- Keep it concise
+- Do not invent specific current news if you are unsure
+- If current data is not available, provide cautious market-watch framing rather than pretending to have live data
 
 KEY HIGHLIGHTS:
 - 5 to 7 bullets
@@ -219,12 +206,9 @@ COMBAT CULTURE & MEDIA:
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-5.4",
-        reasoning: { effort: "low" },
-        tools: [{ type: "web_search" }],
-        instructions,
-        input,
-        max_output_tokens: 2600
+        model: "gpt-5-mini",
+        input: prompt,
+        max_output_tokens: 1800
       })
     });
 
