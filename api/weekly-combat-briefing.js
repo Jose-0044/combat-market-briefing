@@ -68,55 +68,75 @@ export default async function handler(req, res) {
   if (!process.env.ZAPIER_SECRET) {
     return res.status(200).json({
       ok: true,
-      briefing_text: "System note: ZAPIER_SECRET missing."
+      briefing_text:
+        "System note: ZAPIER_SECRET is missing in Vercel environment variables."
     });
   }
 
   if (!process.env.OPENAI_API_KEY) {
     return res.status(200).json({
       ok: true,
-      briefing_text: "System note: OPENAI_API_KEY missing."
+      briefing_text:
+        "System note: OPENAI_API_KEY is missing in Vercel environment variables."
     });
   }
 
   if (normalize(auth) !== normalize(expected)) {
     return res.status(200).json({
       ok: true,
-      briefing_text: "System note: authorization failed."
+      briefing_text:
+        "System note: authorization failed. Check Zapier Authorization header and Vercel ZAPIER_SECRET."
     });
   }
 
   const prompt = `
-You are a senior commercial market intelligence analyst producing a weekly combat market briefing.
+You are a senior commercial market intelligence analyst producing a weekly combat market briefing for the CEO of Hayabusa Fightwear.
 
-Use live web search, but keep research efficient.
+Use live web search, but keep the research narrow and efficient.
 
-GOAL:
-Identify 8–10 commercially relevant market signals from the last 7 days.
+Goal:
+Find 5 to 7 current, commercially relevant combat market signals from the last 7 days.
 
-FOCUS AREAS:
-- Brand activity (Hayabusa, Venum, Rival, RDX, Fairtex, Everlast, Tatami, Scramble)
-- Pricing / discounting / promotions
-- Marketplace dynamics (Amazon, DTC, wholesale)
-- Distribution / expansion
-- Media / platform monetization (UFC, DAZN, etc.)
-- Event-driven demand
-- Fighter commercial relevance (Floyd Mayweather if applicable)
-- Combat culture / entertainment crossover (Marvel, gaming, film) only if meaningful
+Hayabusa context:
+- Premium combat performance brand
+- Core categories: boxing gloves, BJJ/grappling apparel, protective equipment, combat apparel
+- Key channels: DTC, Amazon, wholesale, gyms, distributors, international expansion
+- Key watch areas: premium positioning, pricing pressure, BJJ/no-gi growth, boxing hardgoods pressure, UFC/TKO/BJJ activity, gaming/film/combat culture adjacencies
 
-PRIORITIZE:
-- Pricing pressure
-- Channel power shifts
-- Brand momentum
-- Demand signals
-- Monetization expansion
+Prioritize:
+- Brand moves
+- Pricing / promotions
+- Channel shifts
+- Distribution
+- Media/platform monetization
+- Event monetization
+- Fighter or boxer commercial relevance
+- Combat culture/media only if commercially relevant
 
-AVOID:
-- Fight results without commercial relevance
-- Weak or filler signals
-- AI-style phrasing
+Track if visible:
+- Hayabusa
+- Venum
+- Rival
+- RDX
+- Fairtex
+- Tatami
+- Scramble
+- Everlast
+- Sanabul
+- Engage
+- TITLE Boxing
+- Floyd Mayweather
+- Marvel
+- Mortal Kombat
+- Street Fighter
 
-FORMAT EXACTLY:
+Use credible current public sources.
+Do not force weak items.
+Do not over-search.
+Do not mention crawling, scraping, or data retrieval.
+Do not use phrases like "this matters because", "commercially relevant because", or "signal:".
+
+Return the briefing ONCE ONLY in this exact format:
 
 Good morning, please find your weekly market highlights below:
 
@@ -150,35 +170,53 @@ COMBAT CULTURE & MEDIA
 
 The Hayabusa AI market insight agent
 
-RULES:
-- Output once only
-- No repetition
-- Plain text
+Rules:
+- Plain text only
 - No markdown
-- No numbering
-- Simple dash bullets
+- No ##
+- No **
+- No numbered lists
+- Simple dash bullets only
+- No duplicate sections
+- No duplicate bullets
+- Do not repeat the briefing
+- Keep it concise
 
 KEY HIGHLIGHTS:
-- 8 to 10 bullets
-- external only (no Hayabusa)
+- 5 to 7 bullets
+- external market only
+- no Hayabusa bullets
 
 HAYABUSA RELATED:
-- 2 to 3 bullets
+- 1 to 3 bullets
+- Hayabusa only
+- include Mayweather if relevant to Hayabusa
 
 COMBAT SECTOR SIGNALS:
-- 2 to 3 bullets
+- 2 bullets max
+- structural market shifts only
 
 MARKET PRESSURE SIGNALS:
-- up to 3 bullets
+- 2 bullets max
+- pricing pressure, margin defense, share-taking, channel power
 
 EVENT & PLATFORM WATCH:
-- 1 to 3 bullets OR fallback line
+- 1 to 2 bullets if relevant
+- otherwise write:
+- No major commercially relevant event signals detected this week
 
 PROMINENT FIGHTERS & BOXERS WATCH:
-- 1 to 3 bullets OR fallback line
+- 1 to 2 bullets if relevant
+- include Floyd Mayweather if relevant
+- otherwise write:
+- No major commercially relevant fighter or boxer signals detected this week
 
 COMBAT CULTURE & MEDIA:
-- 1 to 2 bullets OR fallback line
+- 1 to 2 bullets if relevant
+- include Marvel, Mortal Kombat, Street Fighter, gaming, film, entertainment crossover if commercially relevant
+- otherwise write:
+- No major commercially relevant combat culture or media signals detected this week
+- No major commercially relevant Marvel signals detected this week
 `;
 
   try {
@@ -193,7 +231,7 @@ COMBAT CULTURE & MEDIA:
         reasoning: { effort: "low" },
         tools: [{ type: "web_search" }],
         input: prompt,
-        max_output_tokens: 2600
+        max_output_tokens: 2200
       })
     });
 
@@ -202,30 +240,29 @@ COMBAT CULTURE & MEDIA:
     if (!response.ok) {
       return res.status(200).json({
         ok: true,
-        briefing_text: `System note: OpenAI failed (${response.status})`
+        briefing_text: `System note: OpenAI web-search request failed with status ${response.status}.`
       });
     }
 
-    const raw = extractOutputText(data);
+    const rawBriefingText = extractOutputText(data);
 
-    if (!raw) {
+    if (!rawBriefingText) {
       return res.status(200).json({
         ok: true,
         briefing_text: "No briefing generated."
       });
     }
 
-    const cleaned = removeDuplicateBriefing(raw);
+    const briefingText = removeDuplicateBriefing(rawBriefingText);
 
     return res.status(200).json({
       ok: true,
-      briefing_text: cleaned
+      briefing_text: briefingText
     });
-
   } catch (error) {
     return res.status(200).json({
       ok: true,
-      briefing_text: `System note: runtime error: ${error.message}`
+      briefing_text: `System note: runtime error during web-search briefing generation: ${error.message || String(error)}`
     });
   }
 }
