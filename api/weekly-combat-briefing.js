@@ -109,7 +109,7 @@ Track:
 - Engage
 - TITLE Boxing
 
-Countries:
+Countries to consider:
 - USA
 - Canada
 - UK
@@ -117,30 +117,14 @@ Countries:
 - Germany
 - UAE
 
-Priority sources to use where relevant:
-- mmajunkie.usatoday.com
-- mmamania.com
-- ufc.com
-- sportingnews.com/uk
-- grapplinginsider.com
-- ringmagazine.com
-- boxingscene.com
-- fightnews.com
-- immaf.org
-- uaewarriors.com
-- gulftoday.ae
-- reviewjournal.com
-- worldboxing.org
-- win-magazine.com
-
-Also check:
+Also check if relevant:
 - Floyd Mayweather
 - Marvel
 - Mortal Kombat
 - Street Fighter
 - combat film, gaming, and entertainment crossover activity
 
-Do not force weak items just to include a source.
+Use credible public web sources. Do not force weak items.
 `;
 
   const input = `
@@ -189,38 +173,38 @@ Rules:
 - No duplicate bullets
 
 KEY HIGHLIGHTS:
-- 6 to 8 bullets
+- 5 to 7 bullets
 - external market only
 - no Hayabusa bullets
 - prioritize pricing, channels, media/platform shifts, distribution, brand movement
 
 HAYABUSA RELATED:
-- 2 to 4 bullets
+- 2 to 3 bullets
 - Hayabusa only
 - include Mayweather if relevant to Hayabusa
 
 COMBAT SECTOR SIGNALS:
-- 2 to 3 bullets
+- 2 bullets
 - structural market shifts only
 
 MARKET PRESSURE SIGNALS:
-- up to 4 bullets
+- up to 3 bullets
 - pricing pressure, margin defense, share-taking, channel power
 
 EVENT & PLATFORM WATCH:
-- 2 to 3 bullets if relevant
+- 1 to 3 bullets if relevant
 - otherwise write:
 - No major commercially relevant event signals detected this week
 
 PROMINENT FIGHTERS & BOXERS WATCH:
-- 2 to 3 bullets if relevant
+- 1 to 3 bullets if relevant
 - include Floyd Mayweather if relevant
 - include media sentiment if commercially relevant
 - otherwise write:
 - No major commercially relevant fighter or boxer signals detected this week
 
 COMBAT CULTURE & MEDIA:
-- 2 to 3 bullets if relevant
+- 1 to 3 bullets if relevant
 - include Marvel, Mortal Kombat, Street Fighter, gaming, film, entertainment crossover if commercially relevant
 - otherwise write:
 - No major commercially relevant combat culture or media signals detected this week
@@ -240,7 +224,7 @@ COMBAT CULTURE & MEDIA:
         tools: [{ type: "web_search" }],
         instructions,
         input,
-        max_output_tokens: 3000
+        max_output_tokens: 2600
       })
     });
 
